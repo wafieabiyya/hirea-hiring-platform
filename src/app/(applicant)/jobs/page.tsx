@@ -15,6 +15,7 @@ import {
   submitApplicationLocal,
 } from "@/features/jobs/data/local-action";
 import EmptyStateJob from "@/features/jobs/components/EmptyStateJob";
+import { useRouter } from "next/navigation";
 
 const CATEGORY_OPTIONS: JobType[] = [
   "Full-time",
@@ -36,6 +37,8 @@ export default function ApplicantJobsPage() {
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [activeId, setActiveId] = useState<number | null>(null);
   const [applyOpen, setApplyOpen] = useState(false);
+
+  const router = useRouter();
 
   const [detailFields, setDetailFields] = useState<
     { key: string; validation?: { required?: boolean } }[]
@@ -302,6 +305,7 @@ export default function ApplicantJobsPage() {
                 onClose={() => setApplyOpen(false)}
                 onSubmit={async (payload) => {
                   await submitApplicationLocal(activeJob.id!, payload);
+
                   setJobs((prev) =>
                     prev.map((j) =>
                       j.id === activeJob.id
@@ -312,7 +316,8 @@ export default function ApplicantJobsPage() {
                         : j,
                     ),
                   );
-                  setApplyOpen(false);
+
+                  router.push("/jobs/success");
                 }}
               />
             </Modal>
