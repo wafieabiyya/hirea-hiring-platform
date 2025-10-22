@@ -16,6 +16,9 @@ import {
 } from "@/features/jobs/data/local-action";
 import EmptyStateJob from "@/features/jobs/components/EmptyStateJob";
 import { useRouter } from "next/navigation";
+import { Sk } from "@/shared/ui/Skeleton";
+import JobSkeletonCard from "@/shared/ui/JobSkeletonCard";
+import { DetailSkeleton } from "@/features/candidates/ui/DetailSkeleton";
 
 const CATEGORY_OPTIONS: JobType[] = [
   "Full-time",
@@ -40,6 +43,9 @@ export default function ApplicantJobsPage() {
 
   const router = useRouter();
 
+  const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
+
   const [detailFields, setDetailFields] = useState<
     { key: string; validation?: { required?: boolean } }[]
   >([]);
@@ -50,6 +56,7 @@ export default function ApplicantJobsPage() {
   useEffect(() => {
     let alive = true;
     (async () => {
+      setLoading(true);
       const rows = await db.jobs.orderBy("created_at").reverse().toArray();
       if (!alive) return;
 
@@ -57,6 +64,8 @@ export default function ApplicantJobsPage() {
 
       const activeOnly = rows.filter((j) => j.status === "active");
       if (activeOnly.length && activeId == null) setActiveId(activeOnly[0].id!);
+
+      setLoading(false);
     })();
     return () => {
       alive = false;
@@ -104,8 +113,12 @@ export default function ApplicantJobsPage() {
         setDetailLevels({});
         return;
       }
+      setDetailLoading(true);
       const d = await getJobDetailFormatted(activeId);
-      if (!alive || !d) return;
+      if (!alive || !d) {
+        setDetailLoading(false);
+        return;
+      }
 
       const fields =
         d.application_form?.sections?.[0]?.fields ??
@@ -114,6 +127,7 @@ export default function ApplicantJobsPage() {
 
       setDetailFields(fields);
       setDetailLevels(d.field_levels ?? {});
+      setDetailLoading(false);
     })();
     return () => {
       alive = false;
@@ -136,7 +150,35 @@ export default function ApplicantJobsPage() {
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <>
+          <div className="my-2 text-sm sm:text-base font-normal">
+            <Sk className="h-4 w-28" />
+          </div>
+
+          <div
+            className="grid gap-4 sm:gap-6 lg:grid-cols-[420px_1fr]"
+            aria-busy
+          >
+            {/* LEFT skeleton list */}
+            <div
+              className={[
+                "w-full overflow-y-auto pr-1",
+                "max-h-[60vh] sm:max-h-[70vh]",
+                "lg:h-[648px] lg:max-h-none",
+              ].join(" ")}
+            >
+              <div className="space-y-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <JobSkeletonCard key={i} />
+                ))}
+              </div>
+            </div>
+
+            <DetailSkeleton />
+          </div>
+        </>
+      ) : filtered.length === 0 ? (
         <div className="rounded-xl border border-[#EDEDED] bg-white p-6 sm:p-10 text-center text-gray-600">
           <EmptyStateJob
             message="Please wait for the next batch of openings."
@@ -188,7 +230,9 @@ export default function ApplicantJobsPage() {
                 "lg:h-[648px] lg:max-h-none",
               ].join(" ")}
             >
-              {activeJob ? (
+              {detailLoading ? (
+                <DetailSkeleton />
+              ) : activeJob ? (
                 <Fragment>
                   {/* header */}
                   <div className="sticky top-0 z-10 border-b border-[#EDEDED] bg-white px-4 sm:px-6 pb-4 pt-4 sm:pt-6">

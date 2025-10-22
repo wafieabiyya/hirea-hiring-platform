@@ -13,7 +13,6 @@ import { useJobsStore } from "@/features/jobs/stores/useJobStores";
 
 export default function AdminJobsClient() {
   const [q, setQ] = useState("");
-
   const { jobs, loading, error } = useJobsStore(
     useShallow((s) => ({
       jobs: s.jobs,
