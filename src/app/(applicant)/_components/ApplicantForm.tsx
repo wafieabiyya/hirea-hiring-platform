@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { ArrowLeft, Upload } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Upload, XCircle } from "lucide-react";
 import FormShell from "@/shared/ui/FormShel";
-import { useMemo, useState, FormEvent } from "react";
+import { useMemo, useState, FormEvent, useRef, useEffect } from "react";
 import { Form } from "@/shared/ui/Form";
 import Button from "@/shared/ui/Button";
 import DomicileSelect from "@/features/candidates/ui/DomicileSelect";
@@ -11,6 +11,7 @@ import PhoneInput from "@/features/candidates/ui/PhoneInput";
 import DOBInput from "@/features/candidates/ui/DOBInput";
 import TakePictureModal from "@/features/candidates/components/TakePictureModal";
 import { FieldLevel } from "@/features/jobs/types/job";
+import { validateLinkedInUrl } from "@/features/candidates/utils/helper";
 
 type FieldSpec = { key: string; validation?: { required?: boolean } };
 
@@ -60,6 +61,25 @@ export default function ApplicantForm({
   const [photo, setPhoto] = useState<string | null>(null);
   const [openTakePic, setOpenTakePic] = useState(false);
 
+  const [linkedinVal, setLinkedinVal] = useState("");
+  const [linkedinValid, setLinkedinValid] = useState<boolean | null>(null);
+
+  const debounceRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!linkedinVal.trim()) {
+      setLinkedinValid(null);
+      return;
+    }
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(() => {
+      setLinkedinValid(validateLinkedInUrl(linkedinVal.trim()));
+    }, 300);
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [linkedinVal]);
+
   const reqConfigMap = useMemo(() => {
     const m: Record<string, boolean> = {};
     for (const f of fields) m[f.key] = !!f.validation?.required;
@@ -96,6 +116,19 @@ export default function ApplicantForm({
       string,
       FormDataEntryValue
     >;
+    if (has("linkedin_link")) {
+      const raw =
+        (
+          e.currentTarget.elements.namedItem(
+            "linkedin_link",
+          ) as HTMLInputElement | null
+        )?.value?.trim() ?? "";
+      if (raw && !validateLinkedInUrl(raw)) {
+        setLinkedinValid(false);
+        return;
+      }
+    }
+
     await onSubmit?.(payload);
   };
 
@@ -272,13 +305,45 @@ export default function ApplicantForm({
       {/* linkedin */}
       {has("linkedin_link") && (
         <Form.Row label="Link LinkedIn" required={isReq("linkedin_link")}>
-          <div className="mb-2">
+          <div className="mb-2 flex flex-col gap-1">
             <Form.Input
               name="linkedin_link"
               type="url"
-              placeholder="https://linkedin.com/in/username"
+              placeholder="https://www.linkedin.com/in/username"
               required={isReq("linkedin_link")}
+              value={linkedinVal}
+              onChange={(e) => setLinkedinVal(e.target.value)}
+              onBlur={(e) => {
+                const v = e.target.value.trim();
+                setLinkedinValid(v ? validateLinkedInUrl(v) : null);
+              }}
             />
+
+            {/* Success hint */}
+            {linkedinValid === true && (
+              <div
+                className="mt-1 inline-flex items-center gap-2 text-sm text-teal-600"
+                aria-live="polite"
+              >
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-teal-600">
+                  <CheckCircle2 className="h-4 w-4 text-white" />
+                </span>
+                <span>URL address found</span>
+              </div>
+            )}
+
+            {/* Error hint */}
+            {linkedinValid === false && (
+              <div
+                className="mt-1 inline-flex items-center gap-2 text-sm text-red-600"
+                aria-live="polite"
+              >
+                <XCircle className="h-5 w-5" />
+                <span>
+                  Invalid LinkedIn URL. Please use a linkedin.com link.
+                </span>
+              </div>
+            )}
           </div>
         </Form.Row>
       )}
