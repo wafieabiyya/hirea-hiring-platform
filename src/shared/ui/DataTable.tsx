@@ -14,6 +14,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { ChevronUp, ChevronDown } from "lucide-react";
+import { useEffect } from "react";
 
 type Props<TData> = {
   data: TData[];
@@ -93,8 +94,12 @@ export default function DataTable<TData>({
     initialColumnOrder ?? defaultOrder,
   );
   const [columnSizing, setColumnSizing] = React.useState<ColumnSizingState>({});
-  const [pageSize, setPageSize] = React.useState<number>(10);
   const [rowSelection, setRowSelection] = React.useState({});
+
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   const table = useReactTable({
     data,
@@ -104,7 +109,7 @@ export default function DataTable<TData>({
       globalFilter,
       columnOrder,
       columnSizing,
-      pagination: { pageIndex: 0, pageSize },
+      pagination,
       rowSelection,
     },
     onSortingChange: setSorting,
@@ -113,6 +118,7 @@ export default function DataTable<TData>({
     onColumnSizingChange: setColumnSizing,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
+    onPaginationChange: setPagination,
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -143,6 +149,10 @@ export default function DataTable<TData>({
     dragColId.current = null;
   };
 
+  useEffect(() => {
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, [globalFilter, data, pagination.pageSize]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -156,8 +166,10 @@ export default function DataTable<TData>({
           <span className="text-gray-600">Rows per page:</span>
           <select
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 transition-colors focus:border-[#01959F] focus:outline-none focus:ring-1 focus:ring-[#01959F]"
-            value={pageSize}
-            onChange={(e) => setPageSize(Number(e.target.value))}
+            value={pagination.pageSize}
+            onChange={(e) =>
+              setPagination((p) => ({ ...p, pageSize: Number(e.target.value) }))
+            }
           >
             {[10, 20, 50].map((n) => (
               <option key={n} value={n}>
@@ -275,13 +287,14 @@ export default function DataTable<TData>({
         <div className="text-sm text-gray-600">
           Page{" "}
           <span className="font-semibold text-gray-900">
-            {table.getState().pagination.pageIndex + 1}
+            {pagination.pageIndex + 1}
           </span>{" "}
           of{" "}
           <span className="font-semibold text-gray-900">
             {table.getPageCount()}
           </span>
         </div>
+
         <div className="flex flex-wrap items-center gap-2">
           <button
             className="rounded-lg border border-gray-200 px-2 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm"
