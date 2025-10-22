@@ -17,7 +17,7 @@ export default function EmptyStateJob({
   return (
     <div className="flex flex-col items-center justify-center rounded-xl px-6 py-14 text-center">
       <Image
-        src="/empty-state.png"
+        src="/empty-state.svg"
         alt="No jobs"
         width={360}
         height={220}
